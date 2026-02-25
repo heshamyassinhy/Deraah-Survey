@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحليل استبيانات درعه - الإصدار المتقدم</title>
+    <title>لوحة تحليل استبيانات درعه - إدارة الدورات</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
@@ -28,7 +28,6 @@
             display: flex;
             flex-direction: column;
         }
-        /* زوم خفيف على الشارت عند الإشارة */
         .chart-zoom-area {
             transition: transform 0.4s ease;
         }
@@ -58,10 +57,18 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
             transition: all 0.2s ease;
         }
-        /* تحسين مظهر القائمة المنسدلة */
         select option {
             background: #1e293b;
             color: white;
+        }
+        .sidebar-item {
+            transition: all 0.3s ease;
+            border-right: 3px solid transparent;
+        }
+        .sidebar-item.active {
+            background: rgba(16, 185, 129, 0.1);
+            border-right-color: #10b981;
+            color: #10b981;
         }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
@@ -70,9 +77,9 @@
 <body class="flex">
 
     <!-- Sidebar -->
-    <aside class="sidebar w-64 fixed h-full hidden lg:block z-50">
+    <aside class="sidebar w-72 fixed h-full hidden lg:block z-50 overflow-y-auto">
         <div class="p-8">
-            <div class="flex items-center gap-3 mb-12">
+            <div class="flex items-center gap-3 mb-10">
                 <div class="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/20 text-2xl">D</div>
                 <div>
                     <h1 class="text-xl font-bold leading-none">درعه</h1>
@@ -80,18 +87,28 @@
                 </div>
             </div>
             
-            <nav class="space-y-4">
-                <p class="text-[10px] text-slate-500 font-bold px-4 mb-2 uppercase tracking-widest">الأدوات</p>
-                
-                <button onclick="exportReport()" class="w-full flex items-center gap-3 px-5 py-3 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-xs text-slate-300 transition-all text-right">
-                    📊 تصدير تقرير إكسيل
-                </button>
+            <nav class="space-y-6">
+                <div>
+                    <p class="text-[10px] text-slate-500 font-bold px-4 mb-3 uppercase tracking-widest">تحليل البيانات</p>
+                    <div id="fileListContainer" class="space-y-1">
+                        <button onclick="switchToFiles('all')" id="btn-all" class="sidebar-item active w-full text-right px-5 py-3 rounded-xl text-xs flex items-center justify-between">
+                            <span>📂 جميع الدورات (عرض مجمع)</span>
+                        </button>
+                        <!-- ملفات الدورة ستظهر هنا -->
+                    </div>
+                </div>
 
-                <button onclick="showExcluded()" class="w-full flex items-center gap-3 px-5 py-3 rounded-xl bg-white/5 hover:bg-amber-500/20 text-xs text-slate-300 transition-all text-right">
-                    🚫 المتدربين المستبعدين
-                </button>
+                <div>
+                    <p class="text-[10px] text-slate-500 font-bold px-4 mb-3 uppercase tracking-widest">الأدوات</p>
+                    <button onclick="exportReport()" class="w-full flex items-center gap-3 px-5 py-3 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-xs text-slate-300 transition-all text-right">
+                        📊 تصدير تقرير إكسيل
+                    </button>
+                    <button onclick="showExcluded()" class="w-full flex items-center gap-3 px-5 py-3 rounded-xl bg-white/5 hover:bg-amber-500/20 text-xs text-slate-300 transition-all text-right mt-2">
+                        🚫 المتدربين المستبعدين
+                    </button>
+                </div>
 
-                <div class="pt-6">
+                <div>
                     <p class="text-[10px] text-slate-500 font-bold px-4 mb-2 uppercase tracking-widest">البحث</p>
                     <input type="text" id="userSearch" placeholder="ابحث باسم المتدرب..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-emerald-500 transition-all text-white">
                 </div>
@@ -99,20 +116,20 @@
         </div>
     </aside>
 
-    <main class="flex-1 lg:mr-64 p-6 lg:p-10">
+    <main class="flex-1 lg:mr-72 p-6 lg:p-10">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
             <div>
-                <h2 class="text-3xl font-bold tracking-tight">تحليل استبيان أكاديمية درعه</h2>
+                <h2 id="currentViewTitle" class="text-3xl font-bold tracking-tight">جميع الدورات (عرض مجمع)</h2>
                 <p class="text-slate-400 mt-2 flex items-center gap-2 text-sm">
                     <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-تحليل الاستبيان للاكاديمية
+                    نظام إدارة الاستبيانات المتعددة
                 </p>
             </div>
             <div class="flex gap-4 w-full md:w-auto">
                 <label for="fileInput" class="custom-button w-full md:w-auto px-8 py-4 rounded-2xl font-bold cursor-pointer flex items-center justify-center gap-3 text-white shadow-lg shadow-emerald-500/20">
-                    رفع ملف النتائج
+                    رفع ملفات (متعدد)
                 </label>
-                <input type="file" id="fileInput" class="hidden" accept=".xlsx, .xls, .csv">
+                <input type="file" id="fileInput" class="hidden" accept=".xlsx, .xls, .csv" multiple>
             </div>
         </header>
 
@@ -134,12 +151,12 @@
             <div class="glass-card p-8 min-h-[500px]">
                 <h4 class="font-bold text-lg mb-6 flex justify-between">تحليل الأسئلة <span>🔍</span></h4>
                 <div id="detailedAnalysisList" class="space-y-3 flex-1 overflow-y-auto pr-2">
-                    <!-- سيتم تعبئته برمجياً وتلقائياً سيأخذ الطول المناسب -->
+                    <p class="text-center opacity-20 mt-20">يرجى رفع ملفات لبدء التحليل</p>
                 </div>
             </div>
         </div>
 
-        <!-- Comments Section Header -->
+        <!-- Comments Section -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <h4 class="text-xl font-bold">المقترحات والتعليقات</h4>
             <div class="flex items-center gap-3">
@@ -196,11 +213,10 @@
 
     <script>
         let mainChart;
-        let cleanData = [];
-        let excludedUsers = [];
-        let rawDataForComments = [];
-        let globalMap = {};
-        let lastHeaders = [];
+        let sessions = {}; // تخزين البيانات لكل ملف { fileName: { cleanData, excludedUsers, headers, globalMap } }
+        let currentSessionId = 'all';
+        let allCleanDataCombined = [];
+        let allExcludedCombined = [];
 
         const columnKeywords = {
             name: ["name", "الاسم"],
@@ -225,21 +241,67 @@
         const contentKeys = ['hours', 'vids', 'book', 'assets', 'exam', 'apply'];
         const allRatingKeys = ['ux', ...instructorKeys, ...contentKeys];
 
-        document.getElementById('fileInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                const data = new Uint8Array(evt.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const ws = workbook.Sheets[workbook.SheetNames[0]];
-                const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
-                processFile(json);
-            };
-            reader.readAsArrayBuffer(file);
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (!files.length) return;
+
+            for (const file of files) {
+                await processFile(file);
+            }
+            updateSidebar();
+            switchToFiles('all');
         });
 
         document.getElementById('commentSort').addEventListener('change', renderComments);
+
+        async function processFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const ws = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                    
+                    if (json.length < 2) { resolve(); return; }
+
+                    const headers = json[0];
+                    const dataRows = json.slice(1);
+                    const map = {};
+                    
+                    Object.keys(columnKeywords).forEach(key => {
+                        map[key] = findColumnIndex(headers, columnKeywords[key]);
+                    });
+
+                    let cData = [];
+                    let eUsers = [];
+
+                    dataRows.forEach(row => {
+                        let isMissing = allRatingKeys.some(key => {
+                            const idx = map[key];
+                            if (idx === -1) return false;
+                            const val = row[idx];
+                            return val === undefined || val === null || val.toString().trim() === "" || val.toString() === "0";
+                        });
+
+                        if (isMissing) {
+                            eUsers.push({ name: row[map.name] || "متدرب غير معروف", row: row, fileName: file.name });
+                        } else {
+                            cData.push({ row, fileName: file.name });
+                        }
+                    });
+
+                    sessions[file.name] = {
+                        cleanData: cData,
+                        excludedUsers: eUsers,
+                        headers: headers,
+                        globalMap: map
+                    };
+                    resolve();
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
 
         function findColumnIndex(headers, keywords) {
             for (let i = 0; i < headers.length; i++) {
@@ -249,66 +311,108 @@
             return -1;
         }
 
-        function processFile(rows) {
-            if (rows.length < 2) return;
-            lastHeaders = rows[0];
-            const dataRows = rows.slice(1);
-            rawDataForComments = dataRows;
+        function updateSidebar() {
+            const container = document.getElementById('fileListContainer');
+            // Keep the "All" button
+            const allBtn = document.getElementById('btn-all');
+            container.innerHTML = '';
+            container.appendChild(allBtn);
 
-            Object.keys(columnKeywords).forEach(key => {
-                globalMap[key] = findColumnIndex(lastHeaders, columnKeywords[key]);
+            Object.keys(sessions).forEach(fileName => {
+                const btn = document.createElement('button');
+                btn.id = `btn-${fileName}`;
+                btn.onclick = () => switchToFiles(fileName);
+                btn.className = 'sidebar-item w-full text-right px-5 py-3 rounded-xl text-[10px] flex items-center justify-between hover:bg-white/5 text-slate-400 truncate';
+                btn.innerHTML = `<span>📄 ${fileName}</span>`;
+                container.appendChild(btn);
             });
+        }
 
-            cleanData = [];
-            excludedUsers = [];
+        function switchToFiles(id) {
+            currentSessionId = id;
+            
+            // UI Active State
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            const activeBtn = document.getElementById(`btn-${id}`);
+            if (activeBtn) activeBtn.classList.add('active');
 
-            dataRows.forEach(row => {
-                let isMissing = allRatingKeys.some(key => {
-                    const idx = globalMap[key];
-                    if (idx === -1) return false;
-                    const val = row[idx];
-                    return val === undefined || val === null || val.toString().trim() === "" || val.toString() === "0";
-                });
-
-                if (isMissing) {
-                    excludedUsers.push({
-                        name: row[globalMap.name] || "متدرب غير معروف",
-                        row: row
-                    });
-                } else {
-                    cleanData.push(row);
-                }
-            });
+            const titleEl = document.getElementById('currentViewTitle');
+            if (id === 'all') {
+                titleEl.innerText = "جميع الدورات (عرض مجمع)";
+                combineAllData();
+            } else {
+                titleEl.innerText = `دورة: ${id}`;
+            }
 
             renderUI();
         }
 
-        function calculatePercentage(data, keys) {
-            let totalPossible = data.length * keys.length;
-            let positive = 0;
-            keys.forEach(key => {
-                const idx = globalMap[key];
-                if (idx !== -1) {
-                    data.forEach(row => { if (parseInt(row[idx]) >= 4) positive++; });
-                }
+        function combineAllData() {
+            allCleanDataCombined = [];
+            allExcludedCombined = [];
+            Object.values(sessions).forEach(s => {
+                allCleanDataCombined = allCleanDataCombined.concat(s.cleanData);
+                allExcludedCombined = allExcludedCombined.concat(s.excludedUsers);
             });
+        }
+
+        function getDataContext() {
+            if (currentSessionId === 'all') {
+                return {
+                    data: allCleanDataCombined,
+                    excluded: allExcludedCombined,
+                    // في العرض المجمع نستخدم خريطة أول ملف كمرجع افتراضي للأسماء
+                    globalMap: sessions[Object.keys(sessions)[0]]?.globalMap || {},
+                    headers: sessions[Object.keys(sessions)[0]]?.headers || []
+                };
+            } else {
+                const s = sessions[currentSessionId];
+                return {
+                    data: s.cleanData,
+                    excluded: s.excludedUsers,
+                    globalMap: s.globalMap,
+                    headers: s.headers
+                };
+            }
+        }
+
+        function calculateScore(targetData, keys, specificMap = null) {
+            let positive = 0;
+            let totalPossible = 0;
+
+            targetData.forEach(item => {
+                // نستخدم الخريطة الخاصة بكل ملف لضمان دقة الحساب حتى لو اختلف ترتيب الأعمدة
+                const mapToUse = specificMap || sessions[item.fileName].globalMap;
+                keys.forEach(key => {
+                    const idx = mapToUse[key];
+                    if (idx !== -1) {
+                        totalPossible++;
+                        if (parseInt(item.row[idx]) >= 4) positive++;
+                    }
+                });
+            });
+
             return totalPossible > 0 ? ((positive / totalPossible) * 100).toFixed(1) : 0;
         }
 
         function renderUI() {
-            document.getElementById('totalResponses').innerText = cleanData.length;
+            const ctx = getDataContext();
+            if (!ctx.data.length && !Object.keys(sessions).length) return;
+
+            document.getElementById('totalResponses').innerText = ctx.data.length;
             
-            const iScore = calculatePercentage(cleanData, instructorKeys);
-            const cScore = calculatePercentage(cleanData, contentKeys);
-            const uScore = calculatePercentage(cleanData, ['ux']);
+            const iScore = calculateScore(ctx.data, instructorKeys);
+            const cScore = calculateScore(ctx.data, contentKeys);
+            const uScore = calculateScore(ctx.data, ['ux']);
 
             document.getElementById('instructorScore').innerText = iScore + "%";
             document.getElementById('contentScore').innerText = cScore + "%";
             document.getElementById('uxScore').innerText = uScore + "%";
 
-            const ctx = document.getElementById('mainChart').getContext('2d');
+            // Chart
+            const chartCtx = document.getElementById('mainChart').getContext('2d');
             if (mainChart) mainChart.destroy();
-            mainChart = new Chart(ctx, {
+            mainChart = new Chart(chartCtx, {
                 type: 'doughnut',
                 data: {
                     labels: ['المدرب', 'المحتوى', 'المنصة'],
@@ -322,27 +426,28 @@
                 options: { 
                     cutout: '70%', 
                     maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Cairo', size: 12 } } } },
-                    animation: { animateScale: true }
+                    plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Cairo', size: 12 } } } }
                 }
             });
 
+            // Detailed List
             const list = document.getElementById('detailedAnalysisList');
             list.innerHTML = '';
             allRatingKeys.forEach(key => {
-                const score = calculatePercentage(cleanData, [key]);
-                const title = lastHeaders[globalMap[key]] || key;
+                const score = calculateScore(ctx.data, [key]);
+                // اسم السؤال نأخذه من الهيدر
+                const title = ctx.headers[ctx.globalMap[key]] || key;
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-all';
                 div.innerHTML = `
                     <div class="flex-1 ml-4 overflow-hidden">
-                        <p class="text-xs text-slate-400 truncate">${title}</p>
-                        <div class="w-full bg-white/10 h-1.5 rounded-full mt-2">
+                        <p class="text-[10px] text-slate-400 truncate">${title}</p>
+                        <div class="w-full bg-white/10 h-1 rounded-full mt-2">
                             <div class="h-full rounded-full ${score > 80 ? 'bg-emerald-500' : 'bg-amber-500'}" style="width: ${score}%"></div>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
-                        <span class="text-sm font-bold">${score}%</span>
+                        <span class="text-xs font-bold">${score}%</span>
                         <button onclick="showLowScores('${key}', '${title}')" class="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500 hover:text-white transition-all text-[10px]">فحص</button>
                     </div>
                 `;
@@ -353,34 +458,36 @@
         }
 
         function renderComments() {
+            const ctx = getDataContext();
             const sortVal = document.getElementById('commentSort').value;
             const instEl = document.getElementById('instructorComments');
             const courseEl = document.getElementById('courseComments');
             instEl.innerHTML = ''; courseEl.innerHTML = '';
             
             let allComments = [];
-            rawDataForComments.forEach(row => {
-                const name = row[globalMap.name] || "متدرب";
-                const date = row[globalMap.date] || "";
-                const iC = row[globalMap.improveInst];
-                const cC = row[globalMap.improveCourse];
+            // تجميع التعليقات من البيانات الحالية (سواء مجمعة أو لملف واحد)
+            ctx.data.forEach(item => {
+                const map = sessions[item.fileName].globalMap;
+                const name = item.row[map.name] || "متدرب";
+                const date = item.row[map.date] || "";
+                const iC = item.row[map.improveInst];
+                const cC = item.row[map.improveCourse];
 
                 if (iC && iC.toString().trim().length > 1 && iC != "0") {
-                    allComments.push({ text: iC.toString(), name, date, row, type: 'inst' });
+                    allComments.push({ text: iC.toString(), name, date, item, type: 'inst' });
                 }
                 if (cC && cC.toString().trim().length > 1 && cC != "0") {
-                    allComments.push({ text: cC.toString(), name, date, row, type: 'course' });
+                    allComments.push({ text: cC.toString(), name, date, item, type: 'course' });
                 }
             });
 
-            // Sorting logic
             if (sortVal === 'new') allComments.sort((a, b) => new Date(b.date) - new Date(a.date));
             else if (sortVal === 'old') allComments.sort((a, b) => new Date(a.date) - new Date(b.date));
             else if (sortVal === 'long') allComments.sort((a, b) => b.text.length - a.text.length);
 
             let iCount = 0, cCount = 0;
             allComments.forEach(c => {
-                const card = createCommentCard(c.text, c.name, c.row);
+                const card = createCommentCard(c.text, c.name, c.item);
                 if (c.type === 'inst') { instEl.appendChild(card); iCount++; }
                 else { courseEl.appendChild(card); cCount++; }
             });
@@ -389,37 +496,90 @@
             document.getElementById('courseCommCount').innerText = cCount;
         }
 
-        function createCommentCard(text, name, row) {
+        function createCommentCard(text, name, item) {
             const div = document.createElement('div');
             div.className = 'comment-card p-5 rounded-2xl cursor-pointer hover:border-emerald-500/40 transition-all';
             div.setAttribute('data-name', name);
-            div.innerHTML = `<p class="text-sm text-slate-300 line-clamp-2">${text}</p><div class="flex justify-between mt-3 opacity-40 text-[10px]"><span>${name}</span><span>عرض التفاصيل</span></div>`;
-            div.onclick = () => openUserDetail(row);
+            div.innerHTML = `
+                <p class="text-xs text-slate-300 line-clamp-2">${text}</p>
+                <div class="flex justify-between mt-3 opacity-40 text-[9px]">
+                    <span>${name} • ${item.fileName}</span>
+                    <span>عرض التفاصيل</span>
+                </div>`;
+            div.onclick = () => openUserDetail(item);
             return div;
         }
 
+        function showLowScores(key, title) {
+            const ctx = getDataContext();
+            const listEl = document.getElementById('lowScoresList');
+            listEl.innerHTML = '';
+            
+            const lowScorers = ctx.data
+                .map(item => {
+                    const idx = sessions[item.fileName].globalMap[key];
+                    return { name: item.row[sessions[item.fileName].globalMap.name], val: parseInt(item.row[idx]), item: item };
+                })
+                .filter(i => i.val > 0 && i.val <= 3)
+                .sort((a, b) => a.val - b.val);
+
+            if (lowScorers.length === 0) listEl.innerHTML = '<p class="text-center py-10 opacity-40">لا توجد تقييمات منخفضة.</p>';
+
+            lowScorers.forEach(i => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-4 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10';
+                div.onclick = () => { closeModal('lowScoresModal'); openUserDetail(i.item); };
+                div.innerHTML = `
+                    <div class="text-right">
+                        <p class="text-sm">${i.name}</p>
+                        <p class="text-[9px] opacity-40">${i.item.fileName}</p>
+                    </div>
+                    <span class="bg-red-500/20 text-red-500 px-3 py-1 rounded-lg font-bold">${i.val}</span>
+                `;
+                listEl.appendChild(div);
+            });
+            document.getElementById('lowScoresModal').style.display = 'flex';
+        }
+
+        function openUserDetail(item) {
+            const map = sessions[item.fileName].globalMap;
+            const iC = item.row[map.improveInst] || "لا يوجد";
+            const cC = item.row[map.improveCourse] || "لا يوجد";
+            document.getElementById('modalUserName').innerText = item.row[map.name] || "متدرب";
+            document.getElementById('modalDate').innerText = `${item.row[map.date] || ""} (${item.fileName})`;
+            document.getElementById('modalCommentContent').innerText = `تحسينات المدرب: \n${iC}\n\nتحسينات الدورة: \n${cC}`;
+            document.getElementById('commentModal').style.display = 'flex';
+        }
+
         function showExcluded() {
+            const ctx = getDataContext();
             const list = document.getElementById('excludedList');
             list.innerHTML = '';
-            if (excludedUsers.length === 0) list.innerHTML = '<p class="text-center py-10 opacity-30">لا يوجد مستبعدون حالياً.</p>';
+            if (ctx.excluded.length === 0) list.innerHTML = '<p class="text-center py-10 opacity-30">لا يوجد مستبعدون حالياً.</p>';
             
-            excludedUsers.forEach(item => {
+            ctx.excluded.forEach(item => {
                 const div = document.createElement('div');
-                div.className = 'p-3 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center';
-                div.innerHTML = `<span class="text-sm">${item.name}</span><span class="text-[10px] text-amber-500">بيانات غير مكتملة</span>`;
+                div.className = 'p-3 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center mb-2';
+                div.innerHTML = `
+                    <div class="text-right">
+                        <p class="text-sm">${item.name}</p>
+                        <p class="text-[9px] opacity-40">${item.fileName}</p>
+                    </div>
+                    <span class="text-[10px] text-amber-500">بيانات ناقصة</span>`;
                 list.appendChild(div);
             });
             document.getElementById('excludedModal').style.display = 'flex';
         }
 
         function exportReport() {
-            if (cleanData.length === 0) return;
+            const ctx = getDataContext();
+            if (ctx.data.length === 0) return;
             
             const summary = [
                 ["تقرير تحليل استبيان أكاديمية درعه"],
+                ["النطاق المستهدف", currentSessionId === 'all' ? "جميع الدورات المرفوعة" : currentSessionId],
                 ["تاريخ التقرير", new Date().toLocaleString()],
-                ["عدد المشاركات المكتملة", cleanData.length],
-                ["عدد المستبعدين", excludedUsers.length],
+                ["عدد المشاركات المكتملة", ctx.data.length],
                 [],
                 ["مؤشرات الرضا العام"],
                 ["المدرب", document.getElementById('instructorScore').innerText],
@@ -431,45 +591,14 @@
             ];
 
             allRatingKeys.forEach(key => {
-                const title = lastHeaders[globalMap[key]] || key;
-                summary.push([title, calculatePercentage(cleanData, [key]) + "%"]);
+                const title = ctx.headers[ctx.globalMap[key]] || key;
+                summary.push([title, calculateScore(ctx.data, [key]) + "%"]);
             });
 
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(summary);
-            XLSX.utils.book_append_sheet(wb, ws, "التقرير التحليلي");
-            XLSX.writeFile(wb, `تقرير_درعه_${new Date().getTime()}.xlsx`);
-        }
-
-        function showLowScores(key, title) {
-            const idx = globalMap[key];
-            const listEl = document.getElementById('lowScoresList');
-            listEl.innerHTML = '';
-            
-            const lowScorers = cleanData
-                .map(r => ({ name: r[globalMap.name], val: parseInt(r[idx]), row: r }))
-                .filter(item => item.val <= 3)
-                .sort((a, b) => a.val - b.val);
-
-            if (lowScorers.length === 0) listEl.innerHTML = '<p class="text-center py-10 opacity-40">لا توجد تقييمات منخفضة.</p>';
-
-            lowScorers.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'flex justify-between items-center p-4 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10';
-                div.onclick = () => { closeModal('lowScoresModal'); openUserDetail(item.row); };
-                div.innerHTML = `<span>${item.name}</span><span class="bg-red-500/20 text-red-500 px-3 py-1 rounded-lg font-bold">${item.val}</span>`;
-                listEl.appendChild(div);
-            });
-            document.getElementById('lowScoresModal').style.display = 'flex';
-        }
-
-        function openUserDetail(row) {
-            const iC = row[globalMap.improveInst] || "لا يوجد";
-            const cC = row[globalMap.improveCourse] || "لا يوجد";
-            document.getElementById('modalUserName').innerText = row[globalMap.name] || "متدرب";
-            document.getElementById('modalDate').innerText = row[globalMap.date] || "";
-            document.getElementById('modalCommentContent').innerText = `مقترح المدرب: \n${iC}\n\nمقترح الدورة: \n${cC}`;
-            document.getElementById('commentModal').style.display = 'flex';
+            XLSX.utils.book_append_sheet(wb, ws, "التقرير");
+            XLSX.writeFile(wb, `تقرير_درعه_${currentSessionId}_${new Date().getTime()}.xlsx`);
         }
 
         document.getElementById('userSearch').addEventListener('input', (e) => {
