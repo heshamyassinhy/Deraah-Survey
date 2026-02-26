@@ -693,6 +693,101 @@
 
             const wsAnalysis = XLSX.utils.aoa_to_sheet(analysisData);
             XLSX.utils.book_append_sheet(wb, wsAnalysis, "تحليل المعايير");
+// 3. تحليل التقييمات الضعيفة (1-2-3)
+const lowRatingsData = [
+    ["تحليل التقييمات الضعيفة (1-2-3)"],
+    ["السؤال", "عدد 1", "% 1", "عدد 2", "% 2", "عدد 3", "% 3"]
+];
+
+allRatingKeys.forEach(key => {
+    const title = ctx.headers[ctx.globalMap[key]] || key;
+
+    let count1 = 0, count2 = 0, count3 = 0;
+
+    ctx.data.forEach(item => {
+        const val = parseInt(item.row[sessions[item.fileName].globalMap[key]]);
+        if (val === 1) count1++;
+        if (val === 2) count2++;
+        if (val === 3) count3++;
+    });
+
+    const total = ctx.data.length || 1;
+
+    lowRatingsData.push([
+        title,
+        count1, ((count1 / total) * 100).toFixed(1) + "%",
+        count2, ((count2 / total) * 100).toFixed(1) + "%",
+        count3, ((count3 / total) * 100).toFixed(1) + "%"
+    ]);
+});
+
+const wsLowRatings = XLSX.utils.aoa_to_sheet(lowRatingsData);
+XLSX.utils.book_append_sheet(wb, wsLowRatings, "تحليل الدرجات الضعيفة");
+// 4. المتدربين المستبعدين
+const excludedData = [
+    ["المتدربين المستبعدين"],
+    ["اسم المتدرب", "اسم الدورة", "سبب الاستبعاد (الأسئلة الناقصة)"]
+];
+
+ctx.excluded.forEach(item => {
+    excludedData.push([
+        item.name,
+        item.fileName,
+        item.missingQuestions.join(" - ")
+    ]);
+});
+
+const wsExcluded = XLSX.utils.aoa_to_sheet(excludedData);
+XLSX.utils.book_append_sheet(wb, wsExcluded, "المستبعدين");
+// 5. تفاصيل التقييمات المنخفضة (اسم + سؤال لكل درجة)
+
+const rating1 = [];
+const rating2 = [];
+const rating3 = [];
+
+ctx.data.forEach(item => {
+    const map = sessions[item.fileName].globalMap;
+    const userName = item.row[map.name] || "غير معروف";
+
+    allRatingKeys.forEach(key => {
+        const idx = map[key];
+        if (idx !== -1) {
+            const val = parseInt(item.row[idx]);
+            const qTitle = ctx.headers[idx] || key;
+
+            if (val === 1) {
+                rating1.push([userName, qTitle]);
+            }
+            if (val === 2) {
+                rating2.push([userName, qTitle]);
+            }
+            if (val === 3) {
+                rating3.push([userName, qTitle]);
+            }
+        }
+    });
+});
+
+const maxLength = Math.max(rating1.length, rating2.length, rating3.length);
+
+const lowDetailsData = [
+    ["تفاصيل التقييمات المنخفضة"],
+    ["اسم (1)", "السؤال (1)", "اسم (2)", "السؤال (2)", "اسم (3)", "السؤال (3)"]
+];
+
+for (let i = 0; i < maxLength; i++) {
+    lowDetailsData.push([
+        rating1[i] ? rating1[i][0] : "",
+        rating1[i] ? rating1[i][1] : "",
+        rating2[i] ? rating2[i][0] : "",
+        rating2[i] ? rating2[i][1] : "",
+        rating3[i] ? rating3[i][0] : "",
+        rating3[i] ? rating3[i][1] : ""
+    ]);
+}
+
+const wsLowDetails = XLSX.utils.aoa_to_sheet(lowDetailsData);
+XLSX.utils.book_append_sheet(wb, wsLowDetails, "تفاصيل حسب الدرجة");
 
             XLSX.writeFile(wb, `تقرير_التحليل_${fileNameToSave}.xlsx`);
         }
