@@ -785,6 +785,100 @@ for (let i = 0; i < maxLength; i++) {
         rating3[i] ? rating3[i][1] : ""
     ]);
 }
+  
+// ===============================
+// شيت 6 - التحليل الذكي الاحترافي
+// ===============================
+
+let promoters = 0;
+let passives = 0;
+let detractors = 0;
+
+let totalRatings = 0;
+let totalScoreSum = 0;
+
+let questionStats = {};
+
+// حساب الإحصائيات
+ctx.data.forEach(item => {
+    const map = sessions[item.fileName].globalMap;
+
+    allRatingKeys.forEach(key => {
+        const idx = map[key];
+        if (idx !== -1) {
+
+            const val = parseInt(item.row[idx]);
+            if (isNaN(val)) return;
+
+            totalRatings++;
+            totalScoreSum += val;
+
+            const qTitle = ctx.headers[idx] || key;
+
+            if (!questionStats[qTitle]) {
+                questionStats[qTitle] = { total: 0, sum: 0 };
+            }
+
+            questionStats[qTitle].total++;
+            questionStats[qTitle].sum += val;
+
+            if (val >= 4) promoters++;
+            else if (val === 3) passives++;
+            else if (val <= 2) detractors++;
+        }
+    });
+});
+
+// معدل الإكمال الصحيح
+const totalParticipants = ctx.data.length + ctx.excluded.length;
+
+const completionRate = totalParticipants > 0
+    ? ((ctx.data.length / totalParticipants) * 100).toFixed(1)
+    : 0;
+
+// NPS Score
+const npsScore = totalRatings > 0
+    ? (((promoters - detractors) / totalRatings) * 100).toFixed(1)
+    : 0;
+
+// متوسط التقييم
+const avgScore = totalRatings > 0
+    ? (totalScoreSum / totalRatings).toFixed(2)
+    : 0;
+
+// ترتيب الأسئلة
+const sortedQuestions = Object.keys(questionStats).map(q => ({
+    question: q,
+    avg: (questionStats[q].sum / questionStats[q].total).toFixed(2)
+}));
+
+sortedQuestions.sort((a, b) => b.avg - a.avg);
+
+const topQuestions = sortedQuestions.slice(0, 3);
+const worstQuestions = sortedQuestions.slice(-3);
+
+// بناء الشيت
+const sheet6Data = [
+    ["التحليل الذكي للتقارير"],
+    [],
+    ["NPS Score", npsScore + "%"],
+    ["Promoters (4-5)", promoters],
+    ["Passives (3)", passives],
+    ["Detractors (1-2)", detractors],
+    [],
+    ["مؤشرات الأداء"],
+    ["معدل إكمال الاستبيان", completionRate + "%"],
+    ["متوسط التقييم العام", avgScore],
+    [],
+    ["أفضل 3 أسئلة"],
+    ...topQuestions.map(q => [q.question, q.avg]),
+    [],
+    ["أسوأ 3 أسئلة"],
+    ...worstQuestions.map(q => [q.question, q.avg])
+];
+
+const wsSheet6 = XLSX.utils.aoa_to_sheet(sheet6Data);
+XLSX.utils.book_append_sheet(wb, wsSheet6, "تحليل ذكي متقدم");
 
 const wsLowDetails = XLSX.utils.aoa_to_sheet(lowDetailsData);
 XLSX.utils.book_append_sheet(wb, wsLowDetails, "تفاصيل حسب الدرجة");
